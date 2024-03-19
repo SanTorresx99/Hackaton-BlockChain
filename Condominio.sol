@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 contract Condominio {
-    // Tipos de publicação do sindico
+    // Tipos de publicação do síndico
     enum TipoPublicacao { Documento, NotasExplicativas, Convocacao, Votacao }
 
     // Estrutura de publicação
@@ -22,7 +22,7 @@ contract Condominio {
         string opcao;
         uint256 contagemVotos;
     }
-    
+
     struct Votacao {
         string pergunta;
         mapping (string => OpcaoVoto) opcoes;
@@ -47,21 +47,30 @@ contract Condominio {
     mapping(address => bool) public moradores;
     mapping(address => address[]) public moradoresPorApartamento;
     mapping(address => address[]) public visitantesPorApartamento;
-    address public enderecoCondominio;
+    mapping(address => address) public chaveCondominio;
+    mapping(address => address) public chaveSindico;
+    mapping(address => address) public chaveProprietario;
+    mapping(address => address) public chaveApartamento;
+
+    // Enumeração dos apartamentos
+    enum Apartamento { Apt01, Apt02, Apt03, Apt04, Apt05 }
+
+    // Endereço do síndico
+    address public enderecoSindico;
 
     // Modificadores
     modifier apenasSindico() {
-        require(tipoUsuario[msg.sender] == TipoUsuario.Sindico, "Apenas o Sindico pode realizar esta operacao");
+        require(msg.sender == enderecoSindico, "Apenas o Síndico pode realizar esta operação");
         _;
     }
 
     modifier apenasProprietario() {
-        require(tipoUsuario[msg.sender] == TipoUsuario.Proprietario, "Apenas Proprietarios podem votar");
+        require(tipoUsuario[msg.sender] == TipoUsuario.Proprietario, "Apenas Proprietários podem realizar esta operação");
         _;
     }
 
     modifier votacaoAberta(uint256 _idVotacao) {
-        require(!votacoes[_idVotacao].encerrada, "Esta votacao esta encerrada");
+        require(!votacoes[_idVotacao].encerrada, "Esta votação está encerrada");
         _;
     }
 
@@ -74,7 +83,7 @@ contract Condominio {
      * @param _validade Prazo de validade da votação
      */
     function publicarVotacaoAssembleia(string memory _pergunta, string[] memory _opcoes, uint256 _validade) public apenasSindico {
-        require(_opcoes.length > 1, "Deve haver pelo menos duas opcoes de voto");
+        require(_opcoes.length > 1, "Deve haver pelo menos duas opções de voto");
 
         votacoesCount++;
         Votacao storage novaVotacao = votacoes[votacoesCount];
@@ -95,7 +104,7 @@ contract Condominio {
         novaPublicacao.id = publicacoesCount;
         novaPublicacao.autor = msg.sender;
         novaPublicacao.titulo = _pergunta;
-        novaPublicacao.descricao = "Votacao durante assembleia";
+        novaPublicacao.descricao = "Votação durante assembleia";
         novaPublicacao.tipo = TipoPublicacao.Votacao;
         novaPublicacao.dataCriacao = block.timestamp;
         novaPublicacao.validade = _validade;
@@ -109,7 +118,7 @@ contract Condominio {
      * @param _validade Prazo de validade da votação
      */
     function publicarVotacaoLongoPrazo(string memory _pergunta, string[] memory _opcoes, uint256 _validade) public apenasSindico {
-        require(_opcoes.length > 1, "Deve haver pelo menos duas opcoes de voto");
+        require(_opcoes.length > 1, "Deve haver pelo menos duas opções de voto");
 
         votacoesCount++;
         Votacao storage novaVotacao = votacoes[votacoesCount];
@@ -130,7 +139,7 @@ contract Condominio {
         novaPublicacao.id = publicacoesCount;
         novaPublicacao.autor = msg.sender;
         novaPublicacao.titulo = _pergunta;
-        novaPublicacao.descricao = "Votacao de longo prazo";
+        novaPublicacao.descricao = "Votação de longo prazo";
         novaPublicacao.tipo = TipoPublicacao.Votacao;
         novaPublicacao.dataCriacao = block.timestamp;
         novaPublicacao.validade = _validade;
@@ -143,7 +152,7 @@ contract Condominio {
      */
     function encerrarVotacao(uint256 _idVotacao) public apenasSindico votacaoAberta(_idVotacao) {
         Votacao storage votacao = votacoes[_idVotacao];
-        require(votacao.totalPresentes >= 2, "Devem estar presentes o Sindico e pelo menos um proprietario para encerrar a votacao");
+        require(votacao.totalPresentes >= 2, "Devem estar presentes o Síndico e pelo menos um proprietário para encerrar a votação");
         votacao.encerrada = true;
         emit VotacaoEncerrada(_idVotacao);
     }
@@ -156,7 +165,7 @@ contract Condominio {
      * @param _apartamento Endereço do apartamento
      */
     function adicionarMorador(address _morador, address _apartamento) public apenasProprietario {
-        require(moradoresPorApartamento[_apartamento].length < 2, "Ja foram adicionados 2 moradores para este apartamento");
+        require(moradoresPorApartamento[_apartamento].length < 2, "Já foram adicionados 2 moradores para este apartamento");
 
         tipoUsuario[_morador] = TipoUsuario.Morador;
         moradores[_morador] = true;
@@ -168,10 +177,12 @@ contract Condominio {
      * @param _visitante Endereço do visitante a ser adicionado
      * @param _apartamento Endereço do apartamento
      */
-    function adicionarVisitante(address _visitante, address _apartamento) public {
-        require(visitantesPorApartamento[_apartamento].length < 3, "Ja foram adicionados 3 visitantes para este apartamento");
+    function adicionarVisitante(address _visitante, address _apartamento, uint256 _validade) public {
+        require(visitantesPorApartamento[_apartamento].length < 3, "Já foram adicionados 3 visitantes para este apartamento");
 
         visitantesPorApartamento[_apartamento].push(_visitante);
+        // Definir a validade do visitante (72 horas)
+        // Implementar lógica para controlar a validade do visitante
     }
 
     /**
@@ -179,10 +190,9 @@ contract Condominio {
      * @param _enderecoCondominio Endereço do condomínio
      */
     function definirEnderecoCondominio(address _enderecoCondominio) public apenasSindico {
-        enderecoCondominio = _enderecoCondominio;
+        chaveCondominio[_enderecoCondominio] = msg.sender;
     }
 
     // Eventos
     event VotacaoEncerrada(uint256 indexed idVotacao);
 }
-//SandroTorres
