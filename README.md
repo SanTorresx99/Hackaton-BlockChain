@@ -4,10 +4,11 @@ Este repositório foi criado para o Hackathon da Nearx com o objetivo de desenvo
 
 Funcionalidades Principais:
 Publicação de Documentos, Notas Explicativas, Convocações e Votações.
-Registro e contagem de votos durante as votações.
-Adição de moradores e visitantes aos apartamentos.
-Encerramento de votações.
+Registro e contagem de votos durante as votações.Encerramento de votações.
+
+Funcionalidades secundárias: Adição de moradores e visitantes aos apartamentos.
 Definição do endereço do condomínio.
+
 Este projeto visa automatizar e facilitar a administração de condomínios por meio de um contrato inteligente na blockchain, garantindo transparência e segurança para todos os envolvidos
 
 # Instalação
