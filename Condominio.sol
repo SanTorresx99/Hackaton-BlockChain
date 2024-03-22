@@ -45,32 +45,47 @@ contract Condominio {
     enum TipoUsuario { Sindico, Proprietario, Morador, Visitante }
     mapping(address => TipoUsuario) public tipoUsuario;
     mapping(address => bool) public moradores;
-    mapping(address => address[]) public moradoresPorApartamento;
+    mapping(uint256 => address[]) public moradoresPorApartamento;
     mapping(address => address[]) public visitantesPorApartamento;
     mapping(address => address) public chaveCondominio;
     mapping(address => address) public chaveSindico;
     mapping(address => address) public chaveProprietario;
     mapping(address => address) public chaveApartamento;
 
+    // Colocar como private dps
+    struct sTipoUsuario{
+      address endereco;
+      TipoUsuario tipo;
+    }
+
     // Enumeração dos apartamentos
     enum Apartamento { Apt01, Apt02, Apt03, Apt04, Apt05 }
 
     // Endereço do síndico
-    address public enderecoSindico;
+    address public immutable enderecoSindico;
+
+    constructor(address _enderecoSindico, sTipoUsuario[] memory _usuarios ){
+      enderecoSindico = _enderecoSindico;
+    //
+      for( uint256 i; i<_usuarios.length; i++ ){
+        tipoUsuario[_usuarios[i].endereco] = _usuarios[i].tipo;
+        usuarios.push(_usuarios[i]);
+      }
+    }
 
     // Modificadores
     modifier apenasSindico() {
-        require(msg.sender == enderecoSindico, "Apenas o Síndico pode realizar esta operação");
+        require(msg.sender == enderecoSindico, "Apenas o Sindico pode realizar esta operacao");
         _;
     }
 
     modifier apenasProprietario() {
-        require(tipoUsuario[msg.sender] == TipoUsuario.Proprietario, "Apenas Proprietários podem realizar esta operação");
+        require(tipoUsuario[msg.sender] == TipoUsuario.Proprietario, "Apenas Proprietarios podem realizar esta operacao");
         _;
     }
 
     modifier votacaoAberta(uint256 _idVotacao) {
-        require(!votacoes[_idVotacao].encerrada, "Esta votação está encerrada");
+        require(!votacoes[_idVotacao].encerrada, "Esta votacao esta encerrada");
         _;
     }
 
@@ -87,6 +102,7 @@ contract Condominio {
 
         votacoesCount++;
         Votacao storage novaVotacao = votacoes[votacoesCount];
+        novaVotacao.id = votacoesCount;
         novaVotacao.pergunta = _pergunta;
         novaVotacao.totalVotos = 0;
         novaVotacao.totalPresentes = 0;
@@ -122,6 +138,7 @@ contract Condominio {
 
         votacoesCount++;
         Votacao storage novaVotacao = votacoes[votacoesCount];
+        novaVotacao.id = votacoesCount;
         novaVotacao.pergunta = _pergunta;
         novaVotacao.totalVotos = 0;
         novaVotacao.totalPresentes = 0;
@@ -148,51 +165,47 @@ contract Condominio {
 
     /**
      * @dev Encerra uma votação
-     * @param _idVotacao ID da votação a ser encerrada
+          * @param _idVotacao ID da votação a ser encerrada
      */
     function encerrarVotacao(uint256 _idVotacao) public apenasSindico votacaoAberta(_idVotacao) {
         Votacao storage votacao = votacoes[_idVotacao];
         require(votacao.totalPresentes >= 2, "Devem estar presentes o Síndico e pelo menos um proprietário para encerrar a votação");
         votacao.encerrada = true;
         emit VotacaoEncerrada(_idVotacao);
-    }
-
-    // Funções relacionadas a gestão dos moradores e visitantes
-
-    /**
-     * @dev Adiciona um morador a um apartamento
-     * @param _morador Endereço do morador a ser adicionado
-     * @param _apartamento Endereço do apartamento
-     */
-    function adicionarMorador(address _morador, address _apartamento) public apenasProprietario {
-        require(moradoresPorApartamento[_apartamento].length < 2, "Já foram adicionados 2 moradores para este apartamento");
-
-        tipoUsuario[_morador] = TipoUsuario.Morador;
-        moradores[_morador] = true;
-        moradoresPorApartamento[_apartamento].push(_morador);
+        emitResultadoVotacao(_idVotacao);
     }
 
     /**
-     * @dev Adiciona um visitante a um apartamento
-     * @param _visitante Endereço do visitante a ser adicionado
-     * @param _apartamento Endereço do apartamento
+     * @dev Permite que um proprietário vote em uma opção de uma votação
+     * @param _idVotacao ID da votação
+     * @param _opcaoVoto Opção de voto selecionada
      */
-    function adicionarVisitante(address _visitante, address _apartamento, uint256 _validade) public {
-        require(visitantesPorApartamento[_apartamento].length < 3, "Já foram adicionados 3 visitantes para este apartamento");
+    function votarProprietario(uint256 _idVotacao, string memory _opcaoVoto) public apenasProprietario votacaoAberta(_idVotacao) {
+        Votacao storage votacao = votacoes[_idVotacao];
+        require(votacao.opcoes[_opcaoVoto].contagemVotos >= 0, "Opção de voto inválida");
+        require(!votacao.votou[msg.sender], "Você já votou nesta votação");
 
-        visitantesPorApartamento[_apartamento].push(_visitante);
-        // Definir a validade do visitante (72 horas)
-        // Implementar lógica para controlar a validade do visitante
+        votacao.totalVotos++;
+        votacao.opcoes[_opcaoVoto].contagemVotos++;
+        votacao.votou[msg.sender] = true;
+
+        emit VotoRegistrado(_idVotacao, msg.sender, _opcaoVoto);
     }
 
     /**
-     * @dev Define o endereço do condomínio
-     * @param _enderecoCondominio Endereço do condomínio
+     * @dev Publica o resultado de uma votação encerrada
+     * @param _idVotacao ID da votação
      */
-    function definirEnderecoCondominio(address _enderecoCondominio) public apenasSindico {
-        chaveCondominio[_enderecoCondominio] = msg.sender;
+    function emitResultadoVotacao(uint256 _idVotacao) internal {
+        Votacao storage votacao = votacoes[_idVotacao];
+        require(votacao.encerrada, "A votação ainda está aberta");
+
+        // Emitir evento com o resultado da votação
+        emit ResultadoVotacao(_idVotacao, votacao.totalVotos, votacao.opcoes);
     }
 
     // Eventos
     event VotacaoEncerrada(uint256 indexed idVotacao);
+    event VotoRegistrado(uint256 indexed idVotacao, address indexed votante, string opcaoVoto);
+    event ResultadoVotacao(uint256 indexed idVotacao, uint256 totalVotos, mapping (string => OpcaoVoto) opcoes);
 }
