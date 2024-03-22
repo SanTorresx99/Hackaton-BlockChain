@@ -6,7 +6,7 @@ MVP - Funcionalidades Principais:
 Publicação de Documentos, Notas Explicativas, Convocações e Votações.
 Registro e contagem de votos durante as votações.Encerramento de votações.
 
-Funcionalidades secundárias: Adição de moradores e visitantes aos apartamentos. Edições do endereço (token) do condomínio. Funcionalidades de gestão de recursos e aplicações financeiras. Integração com DREX.
+Funcionalidades secundárias: Gerenciamento de moradores e visitantes e apartamentos. Edições do endereço (token) do condomínio. Funcionalidades de gestão de recursos e aplicações financeiras. Integração com DREX.
 
 Este projeto visa automatizar e facilitar a administração de condomínios por meio de um contrato inteligente na blockchain, garantindo transparência e segurança para todos os envolvidos
 
@@ -17,12 +17,14 @@ Indicamos o uso do Solidity como a principal linguagem do desenvolvimento de con
 Você pode instalar o Solidity usando o npm (Node.js Package Manager) com o seguinte comando:
 
 npm install -g solc
+
 Isso instalará o compilador Solidity globalmente em sua máquina.
 
 Compilador Solc (solcjs):
 O compilador Solidity também está disponível como uma biblioteca JavaScript. Você pode instalá-lo via npm com o seguinte comando:
 
 npm install solc
+
 Isso permitirá que você integre o compilador Solidity em seus próprios projetos JavaScript.
 
 Outras opções de instalação:
