@@ -1,0 +1,19 @@
+# Use a imagem Node.js como base
+FROM node:20
+
+# Crie um diretório de trabalho dentro do contêiner
+WORKDIR /deploy
+
+# Copie o arquivo package.json e package-lock.json para o diretório de trabalho
+COPY package*.json ./
+
+# Instale as dependências
+RUN npm install
+
+# Copie o restante dos arquivos do projeto para o diretório de trabalho
+COPY . .
+
+EXPOSE 8545
+
+# Comando padrão a ser executado quando o contêiner for iniciado
+CMD [ "npx", "hardhat", "ignition", "deploy", "ignition/modules/Condominio.ts", "--network", "localhost" ]
